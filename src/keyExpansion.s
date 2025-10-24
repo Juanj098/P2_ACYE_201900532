@@ -1,5 +1,4 @@
 //key_expansion
-.include "utils.s"
 .section .bss
     keyAux:     .space 16, 0
 

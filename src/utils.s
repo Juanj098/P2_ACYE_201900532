@@ -110,54 +110,119 @@ low_done:
     ldp x29, x30, [sp], #16
     ret
 
+/* ===========================================
+   readTextInput: convierte una palabra normal a bytes ASCII
+   y la guarda en la matriz matState (4x4 column-major)
+   Entrada:
+    x0 → puntero a la palabra
+=========================================== */
+.type readTextInput, %function
+.global readTextInput
+readTextInput:
+    stp x29, x30, [sp, #-16]!
+    mov x29, sp
+    mov x1, x0
+    ldr x2, =matState
+    mov x3, #0
 
-// ===========================================
-// print_hex_byte: imprime un byte como “AB ”
-// Entrada:
-//   w0 → byte a imprimir
-// ===========================================
-.type print_hex_byte, %function
-print_hex_byte:
+    convert_text_loop:
+        cmp x3,#16
+        b.ge pad_remaining_bytes
+
+        ldrb w4, [x1, x3]
+        cmp w4, #10
+        b.eq pad_remaining_bytes
+        ldrb w4, [x1, x3]
+        cmp w4, #0
+        b.eq pad_remaining_bytes
+
+        mov x7, #4
+        udiv x8, x3, x7
+        msub x9, x8, x7, x3
+        mul x10, x9, x7
+        add x10, x10, x8
+
+        strb w4, [x2, x10]
+        add x3, x3, #1
+        b convert_text_loop
+
+    pad_remaining_bytes:
+        cmp x3, #16
+        b.ge convert_text_done
+
+        mov x7, #4
+        udiv x8, x3, x7
+        msub x9, x8, x7, x3
+        mul x10, x9, x7
+        add x10, x10, x8
+
+        mov w4, #0
+        strb w4, [x2, x10]
+        add x3, x3, #1
+        b pad_remaining_bytes
+
+    convert_text_done:
+        ldp x29, x30, [sp], #16
+        ret
+        .size readTextInput, (. - readTextInput)
+
+    ldp x29, x30, [sp], #16
+    ret
+
+
+/* ===========================================
+   convertHexKey: convierte una palabra normal a bytes ASCII
+   y la guarda en la matriz matKey (4x4 column-major)
+   Entrada:
+     x0 → puntero a la palabra
+=========================================== */
+.type convertHexKey, %function
+.global convertHexKey
+convertHexKey:
     stp x29, x30, [sp, #-16]!
     mov x29, sp
 
-    // separar nibbles
-    and w1, w0, #0xF0
-    lsr w1, w1, #4
-    and w2, w0, #0x0F
+    mov x1, x0            // puntero al texto (palabra)
+    ldr x2, =matKey       // puntero a la matriz destino
+    mov x3, #0            // índice de lectura
 
-    // convertir nibble alto
-    cmp w1, #10
-    b.lt phb_digit
-    add w1, w1, #'A' - 10
-    b phb_done
-phb_digit:
-    add w1, w1, #'0'
-phb_done:
+    convert_key_loop:
+        cmp x3, #16           // máximo 16 bytes (clave AES-128)
+        b.ge pad_key_bytes
 
-    // convertir nibble bajo
-    cmp w2, #10
-    b.lt plb_digit
-    add w2, w2, #'A' - 10
-    b plb_done
-plb_digit:
-    add w2, w2, #'0'
-plb_done:
+        ldrb w4, [x1, x3]     // leer byte actual del texto
+        cmp w4, #10           // salto de línea -> termina
+        b.eq pad_key_bytes
+        cmp w4, #0            // fin de cadena -> termina
+        b.eq pad_key_bytes
 
-    // imprimir los dos caracteres + espacio
-    sub sp, sp, #16
-    strb w1, [sp]
-    strb w2, [sp, #1]
-    mov w3, #' '
-    strb w3, [sp, #2]
+        // convertir a formato column-major
+        mov x7, #4
+        udiv x8, x3, x7
+        msub x9, x8, x7, x3
+        mul x10, x9, x7
+        add x10, x10, x8
 
-    mov x0, #1        // stdout
-    mov x1, sp
-    mov x2, #3
-    mov x8, #64
-    svc #0
+        strb w4, [x2, x10]    // guardar byte en matriz
+        add x3, x3, #1
+        b convert_key_loop
 
-    add sp, sp, #16
-    ldp x29, x30, [sp], #16
-    ret
-.size print_hex_byte, (. - print_hex_byte)
+    pad_key_bytes:
+        cmp x3, #16
+        b.ge convert_key_done
+
+        mov x7, #4
+        udiv x8, x3, x7
+        msub x9, x8, x7, x3
+        mul x10, x9, x7
+        add x10, x10, x8
+
+        mov w4, #0            // padding con ceros
+        strb w4, [x2, x10]
+        add x3, x3, #1
+        b pad_key_bytes
+
+    convert_key_done:
+        ldp x29, x30, [sp], #16
+        ret
+        .size convertHexKey, (. - convertHexKey)
