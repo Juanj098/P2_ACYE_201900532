@@ -1,6 +1,8 @@
 .include "macros.s"
 .include "utils.s"
 .include "constants.s"
+.include "addRoundKey.s"
+.include "subBytes.s"
 
 .section .bss
     key:   .skip 16
@@ -23,6 +25,10 @@
     lenmsg_MtzC = . - msg_MtzC
     msg_MtzK: .asciz "matriz Key \n"
     lenmsg_MtzK = . - msg_MtzK
+    msg_add: .asciz "addRoundKey \n"
+    lenmsg_add = . - msg_add
+    msg_sub: .asciz "subBytes \n"
+    lenmsg_sub = . - msg_sub
     key_err_msg: .asciz "Error: Valor de clave incorrecto\n"
     lenKeyErr = . - key_err_msg
     newline:    .asciz "\n"
@@ -46,12 +52,10 @@ _start:
     svc #0
 
     mov x0, #0
-    sub sp, sp, #8     
-    mov x1, sp        
+    ldr x1, =newline
     mov x2, #1
     mov x8, #63
     svc #0
-    add sp, sp, #8  
 
     // --- Pedir llave ---
     mov x0, #1
@@ -79,11 +83,28 @@ _start:
     mov x2, lenmsg_MtzC
     bl printMatrix
 
-    print 1, newline, 1
 
     ldr x0, =matKey
     ldr x1, =msg_MtzK
     mov x2, lenmsg_MtzK
+    bl printMatrix
+
+    //addRoundkey
+    ldr x19, =matState
+    ldr x20, =matKey
+    bl addRoundKey
+
+    ldr x0, =matState
+    ldr x1, =msg_add
+    mov x2, lenmsg_add
+    bl printMatrix
+
+    //subBytes
+    bl subBytes
+
+    ldr x0, =matState
+    ldr x1, =msg_sub
+    mov x2, lenmsg_sub
     bl printMatrix
 
     // --- Salir ---
