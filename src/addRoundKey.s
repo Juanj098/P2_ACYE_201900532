@@ -8,12 +8,12 @@ addRoundKey:
     mov x29, sp                   // Establecer nuevo frame pointer
     
     // Guardar registros que vamos a usar
-    str x19, [sp, #16]           // Guardar x19
-    str x20, [sp, #24]           // Guardar x20
+    str x21, [sp, #16]           // Guardar x19
+    str x22, [sp, #24]           // Guardar x20
     
     // Cargar direcciones base
-    ldr x19, =matState           // x19 = puntero a matriz de estado
-    ldr x20, =matKey                // x20 = puntero a clave
+    ldr x21, =matState           // x19 = puntero a matriz de estado
+    ldr x22, =matKey                // x20 = puntero a clave
     
     mov x0, #0                   // x0 = contador de bytes (0-15)
     
@@ -23,14 +23,14 @@ addRoundKey:
         b.ge addroundkey_done
         
         // Cargar byte actual del estado y de la clave
-        ldrb w1, [x19, x0]          // w1 = matState[x0]
-        ldrb w2, [x20, x0]          // w2 = key[x0]
+        ldrb w1, [x21, x0]          // w1 = matState[x0]
+        ldrb w2, [x22, x0]          // w2 = key[x0]
         
         // Realizar operación XOR
         eor w3, w1, w2              // w3 = matState[x0] XOR key[x0]
         
         // Almacenar el resultado de vuelta en la matriz de estado
-        strb w3, [x19, x0]          // matState[x0] = matState[x0] XOR key[x0]
+        strb w3, [x21, x0]          // matState[x0] = matState[x0] XOR key[x0]
         
         // Incrementar contador y continuar
         add x0, x0, #1
@@ -38,8 +38,8 @@ addRoundKey:
         
     addroundkey_done:
         // Restaurar registros
-        ldr x19, [sp, #16]
-        ldr x20, [sp, #24]
+        ldr x21, [sp, #16]
+        ldr x22, [sp, #24]
         
         // Epílogo de la función
         ldp x29, x30, [sp], #32
